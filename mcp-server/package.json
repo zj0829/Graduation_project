@@ -1,0 +1,1 @@
+{"name": "pentest-mcp-server", "version": "1.0.0", "description": "基于大模型的Web应用渗透测试工具 - MCP服务器", "main": "server.js", "scripts": {"start": "node server.js", "dev": "node server.js --dev"}, "dependencies": {"express": "^4.18.2", "cors": "^2.8.5", "uuid": "^9.0.0", "child_process": "^1.0.2"}}

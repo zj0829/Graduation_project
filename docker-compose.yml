@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  nmap:
+    image: instrumentisto/nmap:latest
+    container_name: pentest-nmap
+    entrypoint: [""]
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./tools/nmap:/data
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
+  amass:
+    image: caffix/amass:latest
+    container_name: pentest-amass
+    entrypoint: [""]
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./tools/amass:/data
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
+  owasp-zap:
+    image: zaproxy/zap-stable:latest
+    container_name: pentest-owasp-zap
+    ports:
+      - "8090:8090"
+    environment:
+      - TZ=Asia/Shanghai
+      - JAVA_OPTS=-Xmx512m
+    command: zap.sh -daemon -port 8090 -host 0.0.0.0 -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true -config api.key=
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
+  sqlmap:
+    build: ./tools/sqlmap
+    container_name: pentest-sqlmap
+    entrypoint: [""]
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./tools/sqlmap:/data
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
+  metasploit:
+    image: metasploitframework/metasploit-framework:latest
+    container_name: pentest-metasploit
+    ports:
+      - "55553:55553"
+      - "4444:4444"
+    volumes:
+      - ./tools/metasploit:/root/.msf4
+      - ./tools/metasploit-data:/data
+    environment:
+      - TZ=Asia/Shanghai
+      - MSF_DATABASE_CONFIG=postgres://msf:msf_2026_secure@pentest-metasploit-db:5432/msf
+    depends_on:
+      - metasploit-db
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
+  metasploit-db:
+    image: postgres:15-alpine
+    container_name: pentest-metasploit-db
+    environment:
+      - POSTGRES_USER=msf
+      - POSTGRES_PASSWORD=msf_2026_secure
+      - POSTGRES_DB=msf
+      - TZ=Asia/Shanghai
+    volumes:
+      - metasploit-db-data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
+networks:
+  pentest-network:
+    driver: bridge
+    name: pentest-network
+
+volumes:
+  metasploit-db-data:
+    driver: local

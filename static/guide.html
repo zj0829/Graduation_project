@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统使用手册 - 基于大模型的Web应用渗透测试智能辅助系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; line-height: 1.8; }
+        .container { max-width: 960px; margin: 0 auto; padding: 40px 30px; }
+        h1 { font-size: 2em; color: #60a5fa; border-bottom: 2px solid #3b82f6; padding-bottom: 15px; margin-bottom: 30px; }
+        h2 { font-size: 1.5em; color: #a78bfa; margin: 35px 0 15px; padding-left: 12px; border-left: 4px solid #8b5cf6; }
+        h3 { font-size: 1.2em; color: #34d399; margin: 25px 0 10px; }
+        p { margin: 10px 0; }
+        .card { background: #1e293b; border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid #334155; }
+        .card-title { font-size: 1.1em; color: #f472b6; margin-bottom: 12px; font-weight: bold; }
+        pre { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 18px; overflow-x: auto; margin: 12px 0; font-size: 0.9em; line-height: 1.6; }
+        code { font-family: 'Consolas', 'Fira Code', monospace; color: #7dd3fc; }
+        .cmd { color: #fbbf24; }
+        .comment { color: #64748b; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th { background: #1e293b; color: #60a5fa; padding: 10px 15px; text-align: left; border: 1px solid #334155; }
+        td { padding: 10px 15px; border: 1px solid #334155; }
+        tr:nth-child(even) { background: #1e293b; }
+        .tag { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.85em; margin: 2px; }
+        .tag-green { background: #065f46; color: #6ee7b7; }
+        .tag-yellow { background: #713f12; color: #fde047; }
+        .tag-red { background: #7f1d1d; color: #fca5a5; }
+        .tag-blue { background: #1e3a5f; color: #93c5fd; }
+        .step { display: flex; align-items: flex-start; margin: 15px 0; }
+        .step-num { background: #3b82f6; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; flex-shrink: 0; }
+        .step-content { flex: 1; }
+        .warn { background: #422006; border: 1px solid #b45309; border-radius: 8px; padding: 15px; margin: 15px 0; color: #fde047; }
+        .info { background: #0c4a6e; border: 1px solid #0284c7; border-radius: 8px; padding: 15px; margin: 15px 0; color: #7dd3fc; }
+        .success { background: #064e3b; border: 1px solid #059669; border-radius: 8px; padding: 15px; margin: 15px 0; color: #6ee7b7; }
+        .arch-box { background: #1e293b; border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; text-align: center; margin: 8px; }
+        .arch-row { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin: 10px 0; }
+        .arrow { text-align: center; color: #60a5fa; font-size: 1.5em; margin: 5px 0; }
+        a { color: #60a5fa; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+<h1>基于大模型的Web应用渗透测试智能辅助系统 — 使用手册</h1>
+
+<h2>一、系统架构</h2>
+
+<div class="card">
+    <div class="arch-row">
+        <div class="arch-box" style="flex:1; min-width:200px;">
+            <strong style="color:#f472b6;">智能决策层</strong><br>
+            <span style="color:#94a3b8; font-size:0.9em;">DeepSeek LLM API</span><br>
+            <span style="color:#64748b; font-size:0.8em;">需求分析 / 结果分析 / 报告生成</span>
+        </div>
+    </div>
+    <div class="arrow">↕ HTTP (JSON-RPC)</div>
+    <div class="arch-row">
+        <div class="arch-box" style="flex:1; min-width:200px;">
+            <strong style="color:#a78bfa;">调度控制层</strong><br>
+            <span style="color:#94a3b8; font-size:0.9em;">MCP Server (Node.js)</span><br>
+            <span style="color:#64748b; font-size:0.8em;">工具注册 / 任务调度 / JSON-RPC</span>
+        </div>
+    </div>
+    <div class="arrow">↕ Docker Exec</div>
+    <div class="arch-row">
+        <div class="arch-box" style="flex:1; min-width:120px;">
+            <strong style="color:#34d399;">Nmap</strong><br><span style="font-size:0.8em; color:#64748b;">端口扫描</span>
+        </div>
+        <div class="arch-box" style="flex:1; min-width:120px;">
+            <strong style="color:#34d399;">Amass</strong><br><span style="font-size:0.8em; color:#64748b;">子域名枚举</span>
+        </div>
+        <div class="arch-box" style="flex:1; min-width:120px;">
+            <strong style="color:#34d399;">SQLmap</strong><br><span style="font-size:0.8em; color:#64748b;">SQL注入检测</span>
+        </div>
+        <div class="arch-box" style="flex:1; min-width:120px;">
+            <strong style="color:#34d399;">OWASP ZAP</strong><br><span style="font-size:0.8em; color:#64748b;">Web漏洞扫描</span>
+        </div>
+        <div class="arch-box" style="flex:1; min-width:120px;">
+            <strong style="color:#34d399;">Metasploit</strong><br><span style="font-size:0.8em; color:#64748b;">渗透框架</span>
+        </div>
+    </div>
+</div>
+
+<h2>二、环境要求</h2>
+
+<table>
+    <tr><th>项目</th><th>要求</th></tr>
+    <tr><td>操作系统</td><td>Windows 10/11（已验证）</td></tr>
+    <tr><td>Python</td><td>3.11+（推荐3.11）</td></tr>
+    <tr><td>Node.js</td><td>18+（MCP服务依赖）</td></tr>
+    <tr><td>Docker Desktop</td><td>最新版（工具容器运行环境）</td></tr>
+    <tr><td>DeepSeek API Key</td><td>需提前申请（<a href="https://platform.deepseek.com" target="_blank">platform.deepseek.com</a>）</td></tr>
+</table>
+
+<h2>三、系统启动（命令行方式）</h2>
+
+<h3>3.1 启动 Docker Desktop</h3>
+<p>手动双击桌面或开始菜单中的 <strong>Docker Desktop</strong> 图标，等待其状态变为 <span class="tag tag-green">Running</span></p>
+<pre><code><span class="comment"># 验证Docker是否就绪</span>
+<span class="cmd">docker info</span></code></pre>
+
+<h3>3.2 创建Docker网络</h3>
+<pre><code><span class="cmd">docker network create pentest-network</span></code></pre>
+
+<h3>3.3 启动安全测试工具容器</h3>
+<pre><code><span class="comment"># Nmap - 端口扫描</span>
+<span class="cmd">docker run -d --name pentest-nmap --network pentest-network --entrypoint="" instrumentisto/nmap:latest sleep infinity</span>
+
+<span class="comment"># Amass - 子域名枚举</span>
+<span class="cmd">docker run -d --name pentest-amass --network pentest-network --entrypoint="" caffix/amass:latest sleep infinity</span>
+
+<span class="comment"># SQLmap - SQL注入检测（需先构建镜像）</span>
+<span class="cmd">cd tools\sqlmap</span>
+<span class="cmd">docker build -t pentest-sqlmap .</span>
+<span class="cmd">docker run -d --name pentest-sqlmap --network pentest-network --entrypoint="" pentest-sqlmap:latest sleep infinity</span>
+
+<span class="comment"># OWASP ZAP - Web漏洞扫描</span>
+<span class="cmd">docker run -d --name pentest-owasp-zap --network pentest-network -p 8090:8090 -e TZ=Asia/Shanghai zaproxy/zap-stable:latest zap.sh -daemon -port 8090 -host 0.0.0.0 -config api.addrs.addr.name=.* -config api.addrs.addr.regex=true -config api.key=</span>
+
+<span class="comment"># PostgreSQL - Metasploit数据库</span>
+<span class="cmd">docker run -d --name pentest-metasploit-db --network pentest-network -e POSTGRES_USER=msf -e POSTGRES_PASSWORD=msf_2026_secure -e POSTGRES_DB=msf postgres:15-alpine</span>
+
+<span class="comment"># Metasploit - 渗透测试框架</span>
+<span class="cmd">docker run -d --name pentest-metasploit --network pentest-network -p 55553:55553 -p 4444:4444 -e MSF_DATABASE_CONFIG=postgres://msf:msf_2026_secure@pentest-metasploit-db:5432/msf --entrypoint="" metasploitframework/metasploit-framework:latest sleep infinity</span></code></pre>
+
+<div class="info">
+    <strong>验证容器状态：</strong><br>
+    <code>docker ps</code> — 应看到6个容器全部为 <span class="tag tag-green">Up</span> 状态
+</div>
+
+<h3>3.4 启动MCP服务</h3>
+<pre><code><span class="comment"># 进入MCP服务目录</span>
+<span class="cmd">cd mcp-server</span>
+
+<span class="comment"># 首次运行需安装依赖</span>
+<span class="cmd">npm install</span>
+
+<span class="comment"># 启动MCP服务（端口9876）</span>
+<span class="cmd">node server.js</span></code></pre>
+
+<div class="info">
+    <strong>验证MCP服务：</strong><br>
+    浏览器访问 <a href="http://localhost:9876/health" target="_blank">http://localhost:9876/health</a>，应返回 <code>{"status": "healthy"}</code>
+</div>
+
+<h3>3.5 启动后端API服务</h3>
+<pre><code><span class="comment"># 进入项目根目录</span>
+<span class="cmd">cd d:\Graduation_project\Test</span>
+
+<span class="comment"># 首次运行需安装Python依赖</span>
+<span class="cmd">pip install -r requirements.txt</span>
+
+<span class="comment"># 启动后端服务（端口8000）</span>
+<span class="cmd">python main.py</span></code></pre>
+
+<div class="info">
+    <strong>验证后端服务：</strong><br>
+    浏览器访问 <a href="http://localhost:8000/docs" target="_blank">http://localhost:8000/docs</a>，应看到FastAPI自动文档页面
+</div>
+
+<h3>3.6 打开前端页面</h3>
+<pre><code><span class="comment"># 浏览器直接访问</span>
+<span class="cmd">start http://localhost:8000/static/index.html</span></code></pre>
+
+<h2>四、一键启动方式</h2>
+
+<div class="card">
+    <div class="card-title">双击 start.bat 即可自动完成上述所有步骤</div>
+    <p>脚本会自动：检查Docker → 创建网络 → 启动容器 → 启动MCP → 启动后端 → 打开浏览器</p>
+</div>
+
+<div class="card">
+    <div class="card-title">双击 stop.bat 停止所有服务</div>
+    <p>脚本会自动：停止后端进程 → 停止MCP进程 → 停止Docker容器</p>
+</div>
+
+<h2>五、使用流程</h2>
+
+<div class="step">
+    <div class="step-num">1</div>
+    <div class="step-content">
+        <strong>输入测试目标</strong><br>
+        在前端页面的"测试目标"输入框中填入目标网站域名或IP地址，例如：<code>testphp.vulnweb.com</code>
+    </div>
+</div>
+<div class="step">
+    <div class="step-num">2</div>
+    <div class="step-content">
+        <strong>填写测试需求</strong><br>
+        描述你的测试需求，例如："对该网站进行全面安全扫描，检测开放端口和SQL注入漏洞"
+    </div>
+</div>
+<div class="step">
+    <div class="step-num">3</div>
+    <div class="step-content">
+        <strong>选择工具策略</strong><br>
+        <span class="tag tag-blue">智能推荐</span> MCP自动选择最合适的工具组合<br>
+        <span class="tag tag-green">全面扫描</span> 使用所有可用工具<br>
+        <span class="tag tag-yellow">快速扫描</span> 仅使用Nmap快速探测<br>
+        <span class="tag tag-red">自定义</span> 手动选择要使用的工具
+    </div>
+</div>
+<div class="step">
+    <div class="step-num">4</div>
+    <div class="step-content">
+        <strong>点击"开始测试"</strong><br>
+        系统将自动执行：MCP连接 → 工具调用 → 结果分析 → 报告生成
+    </div>
+</div>
+<div class="step">
+    <div class="step-num">5</div>
+    <div class="step-content">
+        <strong>查看报告</strong><br>
+        测试完成后，报告以Markdown格式展示在页面中，可直接阅读或复制保存
+    </div>
+</div>
+
+<h2>六、Docker容器管理</h2>
+
+<table>
+    <tr><th>容器名</th><th>镜像</th><th>工具</th><th>端口</th></tr>
+    <tr><td>pentest-nmap</td><td>instrumentisto/nmap</td><td>Nmap 7.98</td><td>-</td></tr>
+    <tr><td>pentest-amass</td><td>caffix/amass</td><td>Amass v4.2.0</td><td>-</td></tr>
+    <tr><td>pentest-owasp-zap</td><td>zaproxy/zap-stable</td><td>OWASP ZAP</td><td>8090</td></tr>
+    <tr><td>pentest-sqlmap</td><td>pentest-sqlmap（自建）</td><td>SQLmap 1.10</td><td>-</td></tr>
+    <tr><td>pentest-metasploit</td><td>metasploitframework/metasploit-framework</td><td>Metasploit</td><td>55553, 4444</td></tr>
+    <tr><td>pentest-metasploit-db</td><td>postgres:15-alpine</td><td>PostgreSQL 15</td><td>5432</td></tr>
+</table>
+
+<pre><code><span class="comment"># 查看所有容器状态</span>
+<span class="cmd">docker ps -a</span>
+
+<span class="comment"># 启动已停止的容器</span>
+<span class="cmd">docker start pentest-nmap pentest-amass pentest-sqlmap pentest-owasp-zap pentest-metasploit pentest-metasploit-db</span>
+
+<span class="comment"># 停止所有容器</span>
+<span class="cmd">docker stop pentest-nmap pentest-amass pentest-sqlmap pentest-owasp-zap pentest-metasploit pentest-metasploit-db</span>
+
+<span class="comment"># 查看容器日志</span>
+<span class="cmd">docker logs pentest-owasp-zap</span>
+
+<span class="comment"># 在容器内执行命令（示例：手动运行nmap）</span>
+<span class="cmd">docker exec pentest-nmap nmap -sV target.com</span></code></pre>
+
+<h2>七、服务端口说明</h2>
+
+<table>
+    <tr><th>端口</th><th>服务</th><th>说明</th></tr>
+    <tr><td>8000</td><td>后端API (FastAPI)</td><td>前端页面 + REST API + 自动文档</td></tr>
+    <tr><td>9876</td><td>MCP服务 (Node.js)</td><td>JSON-RPC工具调度 + SSE推送</td></tr>
+    <tr><td>8090</td><td>OWASP ZAP API</td><td>Web漏洞扫描器REST API</td></tr>
+    <tr><td>55553</td><td>Metasploit RPC</td><td>渗透测试框架远程调用</td></tr>
+    <tr><td>4444</td><td>Metasploit Handler</td><td>反向连接监听端口</td></tr>
+</table>
+
+<h2>八、可用的测试靶场</h2>
+
+<div class="warn">
+    <strong>⚠ 重要提示：</strong>仅对授权目标进行测试！以下为合法的安全测试靶场网站。
+</div>
+
+<table>
+    <tr><th>网站</th><th>说明</th><th>漏洞类型</th></tr>
+    <tr><td>testphp.vulnweb.com</td><td>OWASP PHP靶场 <span class="tag tag-green">已验证可用</span></td><td>SQL注入、XSS、文件上传</td></tr>
+    <tr><td>testasp.vulnweb.com</td><td>OWASP ASP靶场</td><td>SQL注入、XSS、信息泄露</td></tr>
+    <tr><td>testhtml5.vulnweb.com</td><td>OWASP HTML5靶场</td><td>HTML5安全、CORS、WebSocket</td></tr>
+    <tr><td>juice-shop.herokuapp.com</td><td>OWASP Juice Shop</td><td>OWASP Top 10全覆盖</td></tr>
+</table>
+
+<h2>九、项目文件结构</h2>
+
+<pre><code>Test/
+├── main.py                    <span class="comment"># 后端入口（启动FastAPI）</span>
+├── .env                       <span class="comment"># 环境变量（DeepSeek API Key）</span>
+├── requirements.txt           <span class="comment"># Python依赖</span>
+├── docker-compose.yml         <span class="comment"># Docker编排配置</span>
+├── start.bat                  <span class="comment"># 一键启动脚本</span>
+├── stop.bat                   <span class="comment"># 一键停止脚本</span>
+├── run_test.py                <span class="comment"># 命令行测试脚本</span>
+├── sample_report.md           <span class="comment"># 测试报告样例</span>
+├── app/
+│   ├── llm_brain/             <span class="comment"># 智能决策层 - LLM接口</span>
+│   │   ├── llm_interface.py   <span class="comment">#   DeepSeek API调用、Prompt管理</span>
+│   │   ├── requirement_parser.py
+│   │   ├── result_analyzer.py
+│   │   └── task_planner.py
+│   ├── orchestrator/          <span class="comment"># 调度控制层 - MCP通信</span>
+│   │   ├── routes.py          <span class="comment">#   核心API路由（/execute-test）</span>
+│   │   ├── mcp_service.py     <span class="comment">#   MCP客户端通信</span>
+│   │   ├── tool_registry.py   <span class="comment">#   工具注册管理</span>
+│   │   └── task_scheduler.py  <span class="comment">#   任务调度逻辑</span>
+│   ├── execution/             <span class="comment"># 工具执行层 - 适配器</span>
+│   │   ├── tool_adapter.py
+│   │   ├── information_gathering.py
+│   │   ├── vulnerability_scanning.py
+│   │   └── penetration_testing.py
+│   ├── report/                <span class="comment"># 报告生成模块</span>
+│   │   └── report_generator.py
+│   └── common/                <span class="comment"># 公共模块</span>
+│       ├── logger.py
+│       └── routes.py
+├── mcp-server/
+│   ├── server.js              <span class="comment"># MCP服务（JSON-RPC + SSE）</span>
+│   └── package.json
+├── static/
+│   └── index.html             <span class="comment"># 前端页面</span>
+└── tools/
+    └── sqlmap/
+        └── Dockerfile         <span class="comment"># SQLmap自定义镜像构建</span></code></pre>
+
+<h2>十、常见问题</h2>
+
+<div class="card">
+    <div class="card-title">Q: 启动后端报错 "Connection refused" 连接MCP失败？</div>
+    <p>A: 确保MCP服务已启动（端口9876）。检查命令：<code>netstat -ano | findstr ":9876"</code>。如果MCP未运行，先执行 <code>cd mcp-server && node server.js</code></p>
+</div>
+
+<div class="card">
+    <div class="card-title">Q: Docker容器启动失败？</div>
+    <p>A: 确保Docker Desktop已启动。如果端口被占用，先删除旧容器：<code>docker rm -f 容器名</code>，然后重新创建。</p>
+</div>
+
+<div class="card">
+    <div class="card-title">Q: 测试超时？</div>
+    <p>A: 真实网站扫描需要较长时间（Nmap约2-5分钟，SQLmap约5-10分钟）。建议先使用"快速扫描"模式测试连通性。</p>
+</div>
+
+<div class="card">
+    <div class="card-title">Q: DeepSeek API报错？</div>
+    <p>A: 检查 <code>.env</code> 文件中的 <code>DEEPSEEK_API_KEY</code> 是否正确。确保API账户有余额。</p>
+</div>
+
+<div class="card">
+    <div class="card-title">Q: 如何配置CherryStudio连接MCP？</div>
+    <p>A: 在CherryStudio的MCP服务器配置中，添加地址 <code>http://localhost:9876</code>，协议选择SSE。</p>
+</div>
+
+<h2>十一、数据流</h2>
+
+<pre><code>用户输入 → 前端页面(8000)
+    ↓ POST /api/orchestrator/execute-test
+后端routes.py
+    ↓ httpx → 127.0.0.1:9876/jsonrpc
+MCP服务
+    ↓ initialize → tools/list → tools/call
+Docker容器执行工具（nmap/sqlmap/amass/zap/metasploit）
+    ↓ 返回工具执行结果
+后端routes.py
+    ↓ llm_interface.analyze_results()
+DeepSeek API → 分析漏洞、评估风险
+    ↓ llm_interface.generate_report()
+DeepSeek API → 生成Markdown报告
+    ↓ 返回test_id
+前端页面 → GET /api/orchestrator/test-result/{test_id}
+    ↓ 渲染Markdown报告</code></pre>
+
+<div class="success" style="margin-top:40px; text-align:center;">
+    <strong>系统已就绪，祝测试顺利！</strong><br>
+    前端页面: <a href="http://localhost:8000/static/index.html">http://localhost:8000/static/index.html</a>
+</div>
+
+</div>
+</body>
+</html>

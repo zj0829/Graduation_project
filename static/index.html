@@ -1,0 +1,861 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>基于大模型的Web应用渗透测试智能辅助系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af',
+                        secondary: '#334155',
+                        success: '#059669',
+                        danger: '#dc2626',
+                        warning: '#d97706',
+                        dark: '#0f172a',
+                        light: '#f1f5f9'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass { @apply bg-white/90 backdrop-blur-md; }
+            .card { @apply rounded-xl shadow-lg p-8 transition-all duration-300 hover:shadow-2xl; }
+            .btn { @apply px-6 py-3 rounded-lg font-semibold transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 transform hover:scale-105; }
+            .btn-primary { @apply bg-primary text-white hover:bg-primary/90 focus:ring-primary/50 shadow-lg; }
+            .btn-secondary { @apply bg-secondary text-white hover:bg-secondary/90 focus:ring-secondary/50; }
+            .input { @apply w-full px-5 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 text-gray-800; }
+            .modal { @apply fixed inset-0 flex items-center justify-center z-50 bg-black/60 backdrop-blur-sm; }
+            .modal-content { @apply bg-white rounded-2xl shadow-2xl p-8 max-w-5xl w-full max-h-[90vh] overflow-y-auto text-gray-800; }
+            .gradient-bg { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); }
+        }
+    </style>
+    <style>
+        .report-body h1 { font-size: 1.75rem; font-weight: 800; margin: 1.5rem 0 0.75rem; color: #1e3a5f; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+        .report-body h2 { font-size: 1.4rem; font-weight: 700; margin: 1.25rem 0 0.6rem; color: #1e40af; }
+        .report-body h3 { font-size: 1.15rem; font-weight: 600; margin: 1rem 0 0.5rem; color: #334155; }
+        .report-body h4 { font-size: 1rem; font-weight: 600; margin: 0.75rem 0 0.4rem; color: #475569; }
+        .report-body p { margin: 0.5rem 0; line-height: 1.8; color: #334155; }
+        .report-body ul, .report-body ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+        .report-body li { margin: 0.25rem 0; line-height: 1.7; color: #475569; }
+        .report-body ul li { list-style-type: disc; }
+        .report-body ol li { list-style-type: decimal; }
+        .report-body strong { color: #0f172a; font-weight: 700; }
+        .report-body code { background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.9em; color: #7c3aed; }
+        .report-body pre { background: #0f172a; color: #e2e8f0; padding: 1rem; border-radius: 8px; overflow-x: auto; margin: 0.75rem 0; font-size: 0.85rem; line-height: 1.6; }
+        .report-body pre code { background: none; color: inherit; padding: 0; }
+        .report-body table { width: 100%; border-collapse: collapse; margin: 0.75rem 0; font-size: 0.9rem; }
+        .report-body th { background: #1e40af; color: white; padding: 0.6rem 1rem; text-align: left; font-weight: 600; }
+        .report-body td { padding: 0.5rem 1rem; border: 1px solid #e2e8f0; color: #334155; }
+        .report-body tr:nth-child(even) { background: #f8fafc; }
+        .report-body tr:hover { background: #eff6ff; }
+        .report-body blockquote { border-left: 4px solid #3b82f6; padding: 0.5rem 1rem; margin: 0.75rem 0; background: #eff6ff; border-radius: 0 8px 8px 0; }
+        .report-body hr { border: none; border-top: 2px solid #e2e8f0; margin: 1.5rem 0; }
+        .step-active .step-circle { background: #1e40af !important; color: white !important; }
+        .step-active { opacity: 1 !important; }
+        .step-done .step-circle { background: #059669 !important; color: white !important; }
+        .step-done { opacity: 1 !important; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-inter">
+
+    <!-- 导航栏 -->
+    <nav class="gradient-bg text-white sticky top-0 z-50 shadow-xl">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fa fa-shield-alt text-3xl"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">Web应用渗透测试智能辅助系统</h1>
+                        <p class="text-xs opacity-80">基于大语言模型驱动的自动化安全评估平台</p>
+                    </div>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="#home" class="hover:text-yellow-300 transition-colors font-medium">首页</a>
+                    <a href="#test-section" class="hover:text-yellow-300 transition-colors font-medium">渗透测试</a>
+                    <a href="#history" class="hover:text-yellow-300 transition-colors font-medium">历史报告</a>
+                    <a href="chat.html" class="hover:text-yellow-300 transition-colors font-medium"><i class="fa fa-comments mr-1"></i>AI对话</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 英雄区域 -->
+    <section id="home" class="gradient-bg text-white py-20">
+        <div class="container mx-auto px-6 text-center">
+            <h2 class="text-5xl font-bold mb-6 leading-tight">基于大语言模型的Web应用<br>渗透测试智能辅助系统</h2>
+            <p class="text-xl opacity-90 max-w-3xl mx-auto mb-10">
+                融合DeepSeek大语言模型与CherryStudio MCP服务，实现智能决策、自动调度、工具协同的<br>全自动化渗透测试解决方案
+            </p>
+            <div class="flex justify-center space-x-4">
+                <a href="#test-section" class="btn bg-white text-primary hover:bg-gray-100">
+                    <i class="fa fa-play mr-2"></i>开始测试
+                </a>
+                <a href="#architecture" class="btn border-2 border-white text-white hover:bg-white/10">
+                    <i class="fa fa-info-circle mr-2"></i>了解详情
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 系统特性 -->
+    <section class="py-16 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-brain text-3xl text-primary"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">智能决策层</h3>
+                    <p class="text-gray-600">利用DeepSeek LLM进行需求解析、任务规划、结果分析与报告生成</p>
+                </div>
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-cogs text-3xl text-purple-600"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">调度控制层</h3>
+                    <p class="text-gray-600">通过MCP协议实现工具调度、状态管理与数据流转的统一协调</p>
+                </div>
+                <div class="text-center p-6">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-tools text-3xl text-success"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">工具执行层</h3>
+                    <p class="text-gray-600">集成Nmap、ZAP、SQLmap等专业工具，支持容器化隔离执行</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 测试配置区域 -->
+    <section id="test-section" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="max-w-4xl mx-auto">
+                <div class="card bg-white border border-gray-200">
+                    <div class="text-center mb-8">
+                        <h3 class="text-3xl font-bold text-dark mb-2">智能渗透测试配置</h3>
+                        <p class="text-gray-600">输入测试目标与需求，系统将自动选择最优工具组合并执行测试</p>
+                    </div>
+                    
+                    <form id="testForm" class="space-y-6">
+                        <!-- 测试目标 -->
+                        <div>
+                            <label for="target" class="block text-sm font-semibold mb-2 text-dark">
+                                <i class="fa fa-globe mr-2 text-primary"></i>测试目标
+                            </label>
+                            <input type="text" id="target" name="target" placeholder="请输入目标地址，例如：testphp.vulnweb.com 或 192.168.1.1" class="input" required>
+                        </div>
+
+                        <!-- 测试需求 -->
+                        <div>
+                            <label for="requirements" class="block text-sm font-semibold mb-2 text-dark">
+                                <i class="fa fa-edit mr-2 text-primary"></i>测试需求描述 <span class="text-gray-400 font-normal">（可选）</span>
+                            </label>
+                            <textarea id="requirements" name="requirements" rows="3"
+                                placeholder="描述您的测试需求，留空则进行默认全面扫描"
+                                class="input"></textarea>
+                        </div>
+
+                        <!-- 工具策略选择 -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-2 text-dark">
+                                <i class="fa fa-magic mr-2 text-primary"></i>工具调度策略
+                            </label>
+                            <select id="toolStrategy" name="toolStrategy" class="input">
+                                <option value="auto">智能推荐模式 - 由MCP服务根据需求自动选择最优工具组合</option>
+                                <option value="comprehensive">全面扫描模式 - 使用所有可用工具进行深度测试</option>
+                                <option value="quick">快速扫描模式 - 仅使用基础信息收集工具</option>
+                                <option value="custom">自定义模式 - 手动指定特定测试工具</option>
+                            </select>
+                        </div>
+
+                        <!-- 自定义工具选择（仅在选择custom时显示） -->
+                        <div id="customToolsSection" class="hidden">
+                            <label class="block text-sm font-semibold mb-2 text-dark">
+                                <i class="fa fa-check-square mr-2 text-primary"></i>选择测试工具
+                            </label>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-nmap" name="tools" value="nmap" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>Nmap</strong><br><span class="text-xs text-gray-500">信息收集</span></span>
+                                </label>
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-amass" name="tools" value="amass" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>Amass</strong><br><span class="text-xs text-gray-500">子域名枚举</span></span>
+                                </label>
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-zap" name="tools" value="owasp_zap" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>OWASP ZAP</strong><br><span class="text-xs text-gray-500">漏洞扫描</span></span>
+                                </label>
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-sqlmap" name="tools" value="sqlmap" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>SQLmap</strong><br><span class="text-xs text-gray-500">SQL注入</span></span>
+                                </label>
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-metasploit" name="tools" value="metasploit" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>Metasploit</strong><br><span class="text-xs text-gray-500">漏洞利用</span></span>
+                                </label>
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-burp" name="tools" value="burp_suite" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>Burp Suite</strong><br><span class="text-xs text-gray-500">Web测试</span></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 报告格式 -->
+                        <div>
+                            <label for="reportFormat" class="block text-sm font-semibold mb-2 text-dark">
+                                <i class="fa fa-file-alt mr-2 text-primary"></i>报告输出格式
+                            </label>
+                            <select id="reportFormat" name="reportFormat" class="input">
+                                <option value="markdown">Markdown格式 - 适合技术文档和版本管理</option>
+                                <option value="html">HTML格式 - 适合浏览器查看和分享</option>
+                                <option value="word">Word格式 - 适合打印和正式报告</option>
+                            </select>
+                        </div>
+
+                        <!-- 提交按钮 -->
+                        <div class="flex justify-center pt-4">
+                            <button type="submit" class="btn btn-primary px-12 py-4 text-lg">
+                                <i class="fa fa-rocket mr-2"></i>启动智能测试
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 系统架构说明 -->
+    <section id="architecture" class="py-16 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-dark mb-4">三层解耦式系统架构</h2>
+                <p class="text-gray-600 max-w-2xl mx-auto">采用关注点分离原则，将AI推理与非确定性操作隔离，确保系统稳定性与可扩展性</p>
+            </div>
+
+            <div class="max-w-5xl mx-auto">
+                <div class="relative">
+                    <!-- 架构图示 -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- 智能决策层 -->
+                        <div class="card bg-gradient-to-br from-blue-50 to-blue-100 border-l-4 border-blue-500">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fa fa-brain text-white text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-blue-900">智能决策层</h3>
+                            </div>
+                            <ul class="space-y-2 text-sm text-blue-800">
+                                <li><i class="fa fa-check mr-2"></i>LLM接口模块 (DeepSeek API)</li>
+                                <li><i class="fa fa-check mr-2"></i>需求解析器 (自然语言→结构化数据)</li>
+                                <li><i class="fa fa-check mr-2"></i>任务规划器 (生成DAG执行计划)</li>
+                                <li><i class="fa fa-check mr-2"></i>结果分析器 (语义理解+漏洞定级)</li>
+                                <li><i class="fa fa-check mr-2"></i>报告生成器 (模板驱动多格式输出)</li>
+                            </ul>
+                        </div>
+
+                        <!-- 调度控制层 -->
+                        <div class="card bg-gradient-to-br from-purple-50 to-purple-100 border-l-4 border-purple-500">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fa fa-server text-white text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-purple-900">调度控制层</h3>
+                            </div>
+                            <ul class="space-y-2 text-sm text-purple-800">
+                                <li><i class="fa fa-check mr-2"></i>MCP服务集成 (CherryStudio协议)</li>
+                                <li><i class="fa fa-check mr-2"></i>工具注册表 (元数据管理)</li>
+                                <li><i class="fa fa-check mr-2"></i>任务调度器 (异步队列执行)</li>
+                                <li><i class="fa fa-check mr-2"></i>状态管理器 (生命周期跟踪)</li>
+                                <li><i class="fa fa-check mr-2"></i>异常处理模块 (容错与重试)</li>
+                            </ul>
+                        </div>
+
+                        <!-- 工具执行层 -->
+                        <div class="card bg-gradient-to-br from-green-50 to-green-100 border-l-4 border-green-500">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fa fa-wrench text-white text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold text-green-900">工具执行层</h3>
+                            </div>
+                            <ul class="space-y-2 text-sm text-green-800">
+                                <li><i class="fa fa-check mr-2"></i>Nmap (端口扫描与服务识别)</li>
+                                <li><i class="fa fa-check mr-2"></i>Amass (子域名枚举)</li>
+                                <li><i class="fa fa-check mr-2"></i>OWASP ZAP (Web漏洞扫描)</li>
+                                <li><i class="fa fa-check mr-2"></i>SQLmap (SQL注入检测)</li>
+                                <li><i class="fa fa-check mr-2"></i>Metasploit & Burp Suite</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 核心功能特性 -->
+    <section id="features" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-dark mb-4">核心技术特性</h2>
+                <p class="text-gray-600">融合前沿AI技术与专业安全工具，打造智能化渗透测试新范式</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="card bg-white text-center">
+                    <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-comments text-2xl text-primary"></i>
+                    </div>
+                    <h3 class="font-bold mb-2">自然语言交互</h3>
+                    <p class="text-sm text-gray-600">支持中文自然语言输入测试需求，LLM自动解析并转化为结构化任务</p>
+                </div>
+
+                <div class="card bg-white text-center">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-project-diagram text-2xl text-purple-600"></i>
+                    </div>
+                    <h3 class="font-bold mb-2">智能任务规划</h3>
+                    <p class="text-sm text-gray-600">基于RAG技术生成符合OWASP最佳实践的测试计划，支持依赖关系分析</p>
+                </div>
+
+                <div class="card bg-white text-center">
+                    <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-plug text-2xl text-success"></i>
+                    </div>
+                    <h3 class="font-bold mb-2">MCP协议集成</h3>
+                    <p class="text-sm text-gray-600">通过标准化协议与CherryStudio通信，实现工具的动态发现与调用</p>
+                </div>
+
+                <div class="card bg-white text-center">
+                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <i class="fa fa-chart-line text-2xl text-warning"></i>
+                    </div>
+                    <h3 class="font-bold mb-2">智能风险评级</h3>
+                    <p class="text-sm text-gray-600">LLM语义分析工具输出，自动识别漏洞并评估CVSS风险等级</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 工作流程 -->
+    <section id="workflow" class="py-16 bg-white">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-dark mb-4">智能化测试工作流</h2>
+                <p class="text-gray-600">从需求输入到报告生成的全自动化流程，仅需数分钟即可完成专业级渗透测试</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto">
+                <div class="relative">
+                    <!-- 时间线 -->
+                    <div class="absolute left-1/2 transform -translate-x-1/2 h-full w-1 bg-gradient-to-b from-primary to-purple-600 hidden md:block"></div>
+                    
+                    <div class="space-y-12">
+                        <!-- 步骤1 -->
+                        <div class="flex items-center md:justify-between">
+                            <div class="md:w-5/12 card bg-blue-50 ml-auto">
+                                <h4 class="font-bold text-primary mb-2">① 需求解析</h4>
+                                <p class="text-sm text-gray-700">用户输入自然语言需求 → LLM提取目标、范围、类型等关键信息</p>
+                            </div>
+                            <div class="hidden md:flex w-12 h-12 bg-primary rounded-full items-center justify-center text-white font-bold z-10">1</div>
+                            <div class="md:w-5/12"></div>
+                        </div>
+
+                        <!-- 步骤2 -->
+                        <div class="flex items-center md:justify-between">
+                            <div class="md:w-5/12"></div>
+                            <div class="hidden md:flex w-12 h-12 bg-purple-600 rounded-full items-center justify-center text-white font-bold z-10">2</div>
+                            <div class="md:w-5/12 card bg-purple-50">
+                                <h4 class="font-bold text-purple-900 mb-2">② 智能规划</h4>
+                                <p class="text-sm text-gray-700">结合OWASP知识库 → 生成包含工具链、参数、预期结果的DAG计划</p>
+                            </div>
+                        </div>
+
+                        <!-- 步骤3 -->
+                        <div class="flex items-center md:justify-between">
+                            <div class="md:w-5/12 card bg-green-50 ml-auto">
+                                <h4 class="font-bold text-green-900 mb-2">③ MCP工具调度</h4>
+                                <p class="text-sm text-gray-700">连接CherryStudio MCP服务 → 自动化调用Nmap/ZAP/SQLmap等工具</p>
+                            </div>
+                            <div class="hidden md:flex w-12 h-12 bg-success rounded-full items-center justify-center text-white font-bold z-10">3</div>
+                            <div class="md:w-5/12"></div>
+                        </div>
+
+                        <!-- 步骤4 -->
+                        <div class="flex items-center md:justify-between">
+                            <div class="md:w-5/12"></div>
+                            <div class="hidden md:flex w-12 h-12 bg-warning rounded-full items-center justify-center text-white font-bold z-10">4</div>
+                            <div class="md:w-5/12 card bg-orange-50">
+                                <h4 class="font-bold text-warning mb-2">④ 结果分析与报告</h4>
+                                <p class="text-sm text-gray-700">LLM语义分析原始输出 → 识别漏洞、关联攻击链 → 生成专业报告</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="history" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold text-dark">历史报告</h2>
+                <p class="text-gray-500 mt-2">查看所有已生成的渗透测试报告</p>
+            </div>
+            <div id="historyList" class="space-y-4">
+                <p class="text-center text-gray-400 py-8">暂无历史报告</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="gradient-bg text-white py-8">
+        <div class="container mx-auto px-6 text-center">
+            <p class="mb-2">© 2026 基于大模型的Web应用渗透测试智能辅助系统</p>
+            <p class="text-sm opacity-75">本科毕业设计作品 | 采用三层解耦架构 | DeepSeek + CherryStudio MCP</p>
+        </div>
+    </footer>
+
+    <!-- 结果弹窗 -->
+    <div id="resultModal" class="modal hidden" style="display: none;">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6 pb-4 border-b">
+                <div>
+                    <h3 class="text-2xl font-bold text-dark">渗透测试报告</h3>
+                    <p class="text-sm text-gray-500 mt-1">由大语言模型智能分析生成</p>
+                </div>
+                <button id="closeModal" class="text-gray-400 hover:text-gray-600 text-2xl">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <div id="resultContent" class="space-y-6">
+                <!-- 动态内容 -->
+            </div>
+            
+            <div class="mt-8 pt-6 border-t flex justify-end space-x-4">
+                <button id="downloadReport" class="btn btn-secondary">
+                    <i class="fa fa-download mr-2"></i>下载完整报告
+                </button>
+                <button id="closeModalBtn" class="btn btn-primary">
+                    关闭
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载中弹窗 -->
+    <div id="loadingModal" class="modal hidden" style="display: none;">
+        <div class="modal-content text-center py-12">
+            <div class="animate-spin rounded-full h-20 w-20 border-4 border-t-4 border-b-4 border-primary mx-auto mb-6"></div>
+            <h3 class="text-2xl font-bold text-dark mb-3">正在执行智能测试</h3>
+            <p id="loadingMessage" class="text-gray-600 mb-6">正在初始化MCP连接...</p>
+            
+            <!-- 进度条 -->
+            <div class="w-full bg-gray-200 rounded-full h-3 mb-3 overflow-hidden">
+                <div id="progressBar" class="bg-gradient-to-r from-primary to-purple-600 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+            </div>
+            <p id="progressText" class="text-sm font-medium text-primary">0%</p>
+            
+            <!-- 当前步骤指示器 -->
+            <div id="stepIndicator" class="mt-6 space-y-2 text-left max-w-md mx-auto text-sm">
+                <div class="flex items-center step-item opacity-30" data-step="1">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center mr-3 text-xs font-bold">1</div>
+                    <span>初始化MCP服务连接</span>
+                </div>
+                <div class="flex items-center step-item opacity-30" data-step="2">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center mr-3 text-xs font-bold">2</div>
+                    <span>获取可用工具列表</span>
+                </div>
+                <div class="flex items-center step-item opacity-30" data-step="3">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center mr-3 text-xs font-bold">3</div>
+                    <span>执行安全测试工具</span>
+                </div>
+                <div class="flex items-center step-item opacity-30" data-step="4">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center mr-3 text-xs font-bold">4</div>
+                    <span>智能分析测试结果</span>
+                </div>
+                <div class="flex items-center step-item opacity-30" data-step="5">
+                    <div class="step-circle w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center mr-3 text-xs font-bold">5</div>
+                    <span>生成专业测试报告</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 初始化 ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('系统初始化完成');
+            initToolStrategyToggle();
+            bindEventListeners();
+            loadHistory();
+        });
+
+        // ========== 工具策略切换逻辑 ==========
+        function initToolStrategyToggle() {
+            const strategySelect = document.getElementById('toolStrategy');
+            const customToolsSection = document.getElementById('customToolsSection');
+            
+            if (!strategySelect || !customToolsSection) return;
+            
+            strategySelect.addEventListener('change', function() {
+                if (this.value === 'custom') {
+                    customToolsSection.classList.remove('hidden');
+                } else {
+                    customToolsSection.classList.add('hidden');
+                }
+            });
+        }
+
+        // ========== 事件绑定 ==========
+        function bindEventListeners() {
+            // 表单提交
+            document.getElementById('testForm').addEventListener('submit', handleTestSubmit);
+            
+            // 弹窗关闭
+            document.getElementById('closeModal').addEventListener('click', closeModal);
+            document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+            
+            // 报告下载
+            document.getElementById('downloadReport').addEventListener('click', handleDownloadReport);
+        }
+
+        // ========== 核心业务逻辑：测试提交 ==========
+        async function handleTestSubmit(e) {
+            e.preventDefault();
+            
+            const target = document.getElementById('target').value.trim();
+            const requirements = document.getElementById('requirements').value.trim();
+            const toolStrategy = document.getElementById('toolStrategy').value;
+            const reportFormat = document.getElementById('reportFormat').value;
+            
+            let tools = [];
+            if (toolStrategy === 'custom') {
+                tools = Array.from(document.querySelectorAll('input[name="tools"]:checked')).map(el => el.value);
+                if (tools.length === 0) { alert('请在自定义模式下至少选择一个测试工具'); return; }
+            } else {
+                tools = ['auto'];
+            }
+
+            showLoadingModal();
+
+            let simTimer = null;
+            let simPercent = 5;
+
+            function startSimProgress(from, to, stepLabel) {
+                simPercent = from;
+                if (stepLabel) highlightStep(stepLabel);
+                simTimer = setInterval(() => {
+                    if (simPercent < to) {
+                        simPercent += Math.random() * 2 + 0.5;
+                        if (simPercent > to) simPercent = to;
+                        updateProgress(Math.round(simPercent), null);
+                    }
+                }, 300);
+            }
+
+            function stopSimProgress() {
+                if (simTimer) { clearInterval(simTimer); simTimer = null; }
+            }
+
+            try {
+                updateProgress(5, '正在建立MCP服务连接...');
+                highlightStep(1);
+                await delay(400);
+
+                startSimProgress(10, 28, 2);
+                updateProgress(10, 'MCP服务连接中，获取工具列表...');
+
+                const response = await fetch('/api/orchestrator/execute-test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ target, requirements: requirements || '全面安全扫描', tools, tool_strategy: toolStrategy, report_format: reportFormat })
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || `请求失败: HTTP ${response.status}`);
+                }
+
+                stopSimProgress();
+                updateProgress(30, '已连接MCP服务，工具调度中...');
+                highlightStep(3);
+                await delay(300);
+
+                startSimProgress(35, 70, 3);
+                updateProgress(35, '安全测试工具执行中，请耐心等待...');
+
+                const data = await response.json();
+
+                stopSimProgress();
+                updateProgress(70, '工具执行完成，正在获取结果...');
+                highlightStep(4);
+                await delay(300);
+
+                startSimProgress(72, 88, 4);
+                updateProgress(72, '正在智能分析测试结果...');
+
+                const resultResponse = await fetch(`/api/orchestrator/test-result/${data.test_id}`);
+                if (!resultResponse.ok) throw new Error(`获取结果失败: HTTP ${resultResponse.status}`);
+                const resultData = await resultResponse.json();
+
+                stopSimProgress();
+                updateProgress(90, '正在生成专业测试报告...');
+                highlightStep(5);
+                await delay(400);
+                updateProgress(100, '测试完成！');
+                markAllStepsDone();
+                await delay(500);
+
+                hideLoadingModal();
+                showResultModal(resultData, target, requirements, reportFormat);
+                loadHistory();
+
+            } catch (error) {
+                stopSimProgress();
+                console.error('测试执行错误:', error);
+                hideLoadingModal();
+                if (error.message.includes('500') || error.message.includes('MCP')) {
+                    showErrorAlert('MCP服务连接失败', '请确保MCP服务运行在端口9876。\n\n检查清单：\n✓ MCP服务已启动 (node server.js)\n✓ Docker容器正常运行\n✓ 防火墙允许本地访问');
+                } else {
+                    showErrorAlert('测试执行错误', error.message);
+                }
+            }
+        }
+
+        // ========== UI更新函数 ==========
+        function showLoadingModal() {
+            const modal = document.getElementById('loadingModal');
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+            
+            // 重置进度条
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressText').textContent = '0%';
+            
+            // 重置步骤指示器
+            document.querySelectorAll('.step-item').forEach(item => {
+                item.classList.add('opacity-30');
+                item.querySelector('div').classList.remove('bg-primary', 'text-white');
+                item.querySelector('div').classList.add('bg-gray-300');
+            });
+        }
+
+        function hideLoadingModal() {
+            const modal = document.getElementById('loadingModal');
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+        }
+
+        function updateProgress(percent, message) {
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.getElementById('progressText').textContent = `${percent}%`;
+            if (message) {
+                document.getElementById('loadingMessage').textContent = message;
+            }
+        }
+
+        function highlightStep(stepNum) {
+            document.querySelectorAll('.step-item').forEach((item, index) => {
+                if (index < stepNum) {
+                    item.classList.remove('opacity-30');
+                    item.classList.add('step-active');
+                }
+            });
+        }
+
+        function markAllStepsDone() {
+            document.querySelectorAll('.step-item').forEach(item => {
+                item.classList.remove('opacity-30', 'step-active');
+                item.classList.add('step-done');
+            });
+        }
+
+        function showResultModal(resultData, target, requirements, format) {
+            hideLoadingModal();
+            const modal = document.getElementById('resultModal');
+            modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+
+            const report = resultData.report || '';
+            const reportHtml = typeof marked !== 'undefined' ? marked.parse(report) : renderMarkdown(report);
+            const tools = resultData.tools || [];
+            const createdAt = resultData.created_at || '';
+
+            document.getElementById('resultContent').innerHTML = `
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <p class="text-xs text-blue-500 font-semibold mb-1">测试目标</p>
+                        <p class="font-bold text-blue-900 break-all">${escapeHtml(target)}</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg border border-purple-100">
+                        <p class="text-xs text-purple-500 font-semibold mb-1">使用工具</p>
+                        <p class="font-bold text-purple-900">${Array.isArray(tools) ? tools.join(', ') : tools}</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg border border-green-100">
+                        <p class="text-xs text-green-500 font-semibold mb-1">生成时间</p>
+                        <p class="font-bold text-green-900">${escapeHtml(createdAt)}</p>
+                    </div>
+                </div>
+                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="bg-gray-50 px-6 py-3 border-b flex items-center justify-between">
+                        <h4 class="font-bold text-dark"><i class="fa fa-file-alt mr-2 text-primary"></i>渗透测试报告</h4>
+                        <span class="text-xs text-gray-400">Markdown格式</span>
+                    </div>
+                    <div class="report-body p-6 max-h-[60vh] overflow-auto">${reportHtml}</div>
+                </div>
+            `;
+
+            window.currentReport = report;
+            window.currentReportFormat = format;
+            window.currentTarget = target;
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('resultModal');
+            modal.style.display = 'none';
+            modal.classList.add('hidden');
+        }
+
+        async function handleDownloadReport() {
+            if (!window.currentReport) return;
+            
+            const blob = new Blob([window.currentReport], { type: getMimeType(window.currentReportFormat) });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const target = (window.currentTarget || 'unknown').replace(/https?:\/\//g, '').replace(/[\/\\:*?"<>|]/g, '_');
+            const now = new Date();
+            const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+            a.download = `${target}_${ts}.${getFileExtension(window.currentReportFormat)}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showErrorAlert(title, message) {
+            alert(`${title}\n\n${message}`);
+        }
+
+        // ========== 工具函数 ==========
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function renderMarkdown(markdown) {
+            if (!markdown) return '';
+            
+            let html = markdown
+                .replace(/^#### (.+)$/gm, '<h4 class="text-base font-bold mt-4 mb-2">$1</h4>')
+                .replace(/^### (.+)$/gm, '<h3 class="text-lg font-bold mt-4 mb-2">$1</h3>')
+                .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-6 mb-3">$1</h2>')
+                .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-4">$1</h1>')
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/^- (.+)$/gm, '<li>$1</li>')
+                .replace(/(<li>.*<\/li>\n?)+/g, match => `<ul class="list-disc pl-6 my-2">${match}</ul>`)
+                .replace(/\n\n/g, '</p><p class="mb-3">')
+                .replace(/^(?!<)(?!$)/gm, '');
+            
+            return html;
+        }
+
+        function getMimeType(format) {
+            const mimeMap = {
+                markdown: 'text/markdown',
+                word: 'application/msword',
+                html: 'text/html'
+            };
+            return mimeMap[format] || 'text/plain';
+        }
+
+        function getFileExtension(format) {
+            const extMap = {
+                markdown: 'md',
+                word: 'docx',
+                html: 'html'
+            };
+            return extMap[format] || 'txt';
+        }
+
+        async function loadHistory() {
+            const container = document.getElementById('historyList');
+            if (!container) return;
+            try {
+                const resp = await fetch('/api/orchestrator/reports');
+                const data = await resp.json();
+                const reports = data.reports || [];
+                if (reports.length === 0) {
+                    container.innerHTML = '<p class="text-center text-gray-400 py-8">暂无历史报告</p>';
+                    return;
+                }
+                container.innerHTML = reports.map(r => `
+                    <div class="card bg-white border border-gray-200 flex items-center justify-between">
+                        <div class="flex-1">
+                            <h4 class="font-bold text-dark text-lg">${escapeHtml(r.target)}</h4>
+                            <p class="text-sm text-gray-500 mt-1">
+                                <span class="mr-4"><i class="fa fa-clock mr-1"></i>${r.created_at}</span>
+                                <span class="mr-4"><i class="fa fa-wrench mr-1"></i>${Array.isArray(r.tools) ? r.tools.join(', ') : r.tools}</span>
+                                <span><i class="fa fa-tag mr-1"></i>${r.tool_strategy || 'auto'}</span>
+                            </p>
+                            <p class="text-sm text-gray-400 mt-1">${escapeHtml((r.requirements || '').substring(0, 80))}${(r.requirements || '').length > 80 ? '...' : ''}</p>
+                        </div>
+                        <div class="flex space-x-2 ml-4">
+                            <button onclick="viewHistoryReport('${r.test_id}')" class="btn btn-primary text-sm px-4 py-2">
+                                <i class="fa fa-eye mr-1"></i>查看
+                            </button>
+                            <button onclick="deleteHistoryReport('${r.test_id}')" class="btn text-sm px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200">
+                                <i class="fa fa-trash mr-1"></i>删除
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<p class="text-center text-red-400 py-8">加载历史报告失败</p>';
+            }
+        }
+
+        async function viewHistoryReport(testId) {
+            try {
+                const resp = await fetch(`/api/orchestrator/test-result/${testId}`);
+                const data = await resp.json();
+                if (data.status === 'success') {
+                    showResultModal(data, data.target || '', data.requirements || '', 'markdown');
+                } else {
+                    alert('获取报告失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('获取报告失败: ' + e.message);
+            }
+        }
+
+        async function deleteHistoryReport(testId) {
+            if (!confirm('确定删除该报告？')) return;
+            try {
+                await fetch(`/api/orchestrator/reports/${testId}`, { method: 'DELETE' });
+                loadHistory();
+            } catch (e) {
+                alert('删除失败: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
