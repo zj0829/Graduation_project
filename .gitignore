@@ -44,3 +44,7 @@ docker-data/
 *.tmp
 *.bak
 *.cache
+
+# Private documents
+毕业论文.md
+基于大模型的Web应用渗透测试智能辅助系统.md
