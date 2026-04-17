@@ -10,6 +10,7 @@ from app.orchestrator.routes import router as orchestrator_router
 from app.report.routes import router as report_router
 from app.common.routes import router as logs_router
 from app.chat.routes import router as chat_router
+from app.recon.routes import router as recon_router
 
 # 加载环境变量
 load_dotenv()
@@ -39,6 +40,7 @@ app.include_router(orchestrator_router)
 app.include_router(report_router)
 app.include_router(logs_router)
 app.include_router(chat_router)
+app.include_router(recon_router)
 
 # 健康检查端点
 @app.get("/health")

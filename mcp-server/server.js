@@ -106,6 +106,39 @@ const TOOLS_CONFIG = {
             { name: 'results', type: 'object', required: true, description: '所有工具的执行结果' },
             { name: 'format', type: 'string', required: false, description: '报告格式：markdown, html, word' }
         ]
+    },
+    nikto: {
+        name: 'nikto',
+        description: 'Web服务器漏洞扫描器，检测危险配置、过时软件和服务器安全问题',
+        category: 'vulnerability_scanning',
+        container: 'pentest-nikto',
+        command: 'nikto',
+        parameters: [
+            { name: 'target', type: 'string', required: true, description: '目标URL或IP' },
+            { name: 'options', type: 'string', required: false, description: '扫描选项，如 -Tuning 1234, -ssl' }
+        ]
+    },
+    dirsearch: {
+        name: 'dirsearch',
+        description: 'Web目录和文件暴力扫描器，发现隐藏的目录、文件和API端点',
+        category: 'information_gathering',
+        container: 'pentest-dirsearch',
+        command: 'dirsearch',
+        parameters: [
+            { name: 'url', type: 'string', required: true, description: '目标URL' },
+            { name: 'extensions', type: 'string', required: false, description: '文件扩展名，如 php,asp,jsp' }
+        ]
+    },
+    sslscan: {
+        name: 'sslscan',
+        description: 'SSL/TLS安全扫描器，检测证书信息、协议版本和加密套件弱点',
+        category: 'vulnerability_scanning',
+        container: 'pentest-sslscan',
+        command: 'sslscan',
+        parameters: [
+            { name: 'target', type: 'string', required: true, description: '目标主机名或IP' },
+            { name: 'port', type: 'string', required: false, description: '端口号，默认443' }
+        ]
     }
 };
 
@@ -236,6 +269,15 @@ async function handleToolsCall(params) {
             break;
         case 'burp_suite':
             executionResult = await executeBurpSuite(parameters);
+            break;
+        case 'nikto':
+            executionResult = await executeNikto(parameters);
+            break;
+        case 'dirsearch':
+            executionResult = await executeDirsearch(parameters);
+            break;
+        case 'sslscan':
+            executionResult = await executeSslscan(parameters);
             break;
         default:
             throw new Error(`工具执行未实现: ${tool}`);
@@ -496,6 +538,110 @@ async function executeBurpSuite(params) {
     }
 }
 
+async function executeNikto(params) {
+    let target = params.target;
+    const options = params.options || '';
+    target = target.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
+    try {
+        let cmd = `${DOCKER_CMD} exec pentest-nikto nikto -h ${target} ${options} -Format txt`;
+        log(`[Nikto] 执行命令: ${cmd}`);
+
+        const output = execSync(cmd, {
+            encoding: 'utf8',
+            timeout: 600000,
+            maxBuffer: 50 * 1024 * 1024
+        });
+
+        return {
+            raw_output: output,
+            findings: parseNiktoOutput(output),
+            target,
+            options,
+            execution_time: bjNow()
+        };
+    } catch (error) {
+        log(`[Nikto] 执行错误: ${error.message}`);
+        return {
+            raw_output: error.stdout || error.message,
+            findings: parseNiktoOutput(error.stdout || ''),
+            target,
+            options,
+            error: true,
+            execution_time: bjNow()
+        };
+    }
+}
+
+async function executeDirsearch(params) {
+    const url = params.url;
+    const extensions = params.extensions || 'php,asp,jsp,html,js,txt,bak,zip';
+
+    try {
+        let cmd = `${DOCKER_CMD} exec pentest-dirsearch python3 dirsearch.py -u "${url}" -e ${extensions} --format=plain`;
+        log(`[Dirsearch] 执行命令: ${cmd}`);
+
+        const output = execSync(cmd, {
+            encoding: 'utf8',
+            timeout: 600000,
+            maxBuffer: 50 * 1024 * 1024
+        });
+
+        return {
+            raw_output: output,
+            paths: parseDirsearchOutput(output),
+            url,
+            extensions,
+            execution_time: bjNow()
+        };
+    } catch (error) {
+        log(`[Dirsearch] 执行错误: ${error.message}`);
+        return {
+            raw_output: error.stdout || error.message,
+            paths: parseDirsearchOutput(error.stdout || ''),
+            url,
+            extensions,
+            error: true,
+            execution_time: bjNow()
+        };
+    }
+}
+
+async function executeSslscan(params) {
+    let target = params.target;
+    const port = params.port || '443';
+    target = target.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
+    try {
+        let cmd = `${DOCKER_CMD} exec pentest-sslscan sslscan ${target}:${port}`;
+        log(`[SSLscan] 执行命令: ${cmd}`);
+
+        const output = execSync(cmd, {
+            encoding: 'utf8',
+            timeout: 300000,
+            maxBuffer: 50 * 1024 * 1024
+        });
+
+        return {
+            raw_output: output,
+            ssl_info: parseSslscanOutput(output),
+            target,
+            port,
+            execution_time: bjNow()
+        };
+    } catch (error) {
+        log(`[SSLscan] 执行错误: ${error.message}`);
+        return {
+            raw_output: error.stdout || error.message,
+            ssl_info: parseSslscanOutput(error.stdout || ''),
+            target,
+            port,
+            error: true,
+            execution_time: bjNow()
+        };
+    }
+}
+
 // 辅助解析函数
 function parseNmapOutput(output) {
     const ports = [];
@@ -529,6 +675,59 @@ function parseSqlmapOutput(output) {
         });
     }
     return vulns;
+}
+
+function parseNiktoOutput(output) {
+    const findings = [];
+    const lines = output.split('\n');
+    for (const line of lines) {
+        if (line.includes('+ ') && line.length > 10) {
+            const cleaned = line.replace(/^\+\s*/, '').trim();
+            if (cleaned && !cleaned.startsWith('Target IP') && !cleaned.startsWith('Start Time') && !cleaned.startsWith('Server:')) {
+                let severity = 'Info';
+                if (cleaned.match(/OSVDB|CVE|vulnerable|exploit/i)) severity = 'High';
+                else if (cleaned.match(/default|admin|login|password/i)) severity = 'Medium';
+                findings.push({ detail: cleaned, severity });
+            }
+        }
+    }
+    return findings.slice(0, 30);
+}
+
+function parseDirsearchOutput(output) {
+    const paths = [];
+    const lines = output.split('\n');
+    for (const line of lines) {
+        const match = line.match(/^\s*(\d{3})\s+[\d.]+\s+\w+\s+(.+)/);
+        if (match) {
+            paths.push({ status: match[1], path: match[2].trim() });
+        }
+    }
+    return paths.slice(0, 50);
+}
+
+function parseSslscanOutput(output) {
+    const info = { protocols: [], ciphers: [], certificate: {}, issues: [] };
+    const lines = output.split('\n');
+    for (const line of lines) {
+        if (line.includes('Enabled') && line.match(/SSLv|TLSv/)) {
+            const proto = line.trim().split(/\s+/)[0];
+            info.protocols.push(proto);
+            if (proto.match(/SSLv2|SSLv3|TLSv1\.0|TLSv1\.1/)) {
+                info.issues.push({ severity: 'High', detail: `不安全协议: ${proto}` });
+            }
+        }
+        if (line.includes('Subject:')) {
+            info.certificate.subject = line.split('Subject:')[1].trim();
+        }
+        if (line.includes('Issuer:')) {
+            info.certificate.issuer = line.split('Issuer:')[1].trim();
+        }
+        if (line.includes('Not valid after:')) {
+            info.certificate.expiry = line.split('Not valid after:')[1].trim();
+        }
+    }
+    return info;
 }
 
 // 健康检查端点

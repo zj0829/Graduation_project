@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+﻿﻿﻿﻿﻿﻿﻿﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -84,6 +84,8 @@
                     <a href="#home" class="hover:text-yellow-300 transition-colors font-medium">首页</a>
                     <a href="#test-section" class="hover:text-yellow-300 transition-colors font-medium">渗透测试</a>
                     <a href="#history" class="hover:text-yellow-300 transition-colors font-medium">历史报告</a>
+                    <a href="dashboard.html" class="hover:text-yellow-300 transition-colors font-medium"><i class="fa fa-dashboard mr-1"></i>仪表盘</a>
+                    <a href="knowledge.html" class="hover:text-yellow-300 transition-colors font-medium"><i class="fa fa-book mr-1"></i>知识库</a>
                     <a href="chat.html" class="hover:text-yellow-300 transition-colors font-medium"><i class="fa fa-comments mr-1"></i>AI对话</a>
                 </div>
             </div>
@@ -208,6 +210,18 @@
                                 <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                                     <input type="checkbox" id="tool-burp" name="tools" value="burp_suite" class="rounded text-primary focus:ring-primary">
                                     <span class="text-sm"><strong>Burp Suite</strong><br><span class="text-xs text-gray-500">Web测试</span></span>
+                                </label>
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-nikto" name="tools" value="nikto" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>Nikto</strong><br><span class="text-xs text-gray-500">服务器扫描</span></span>
+                                </label>
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-dirsearch" name="tools" value="dirsearch" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>Dirsearch</strong><br><span class="text-xs text-gray-500">目录扫描</span></span>
+                                </label>
+                                <label class="flex items-center space-x-2 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                                    <input type="checkbox" id="tool-sslscan" name="tools" value="sslscan" class="rounded text-primary focus:ring-primary">
+                                    <span class="text-sm"><strong>SSLscan</strong><br><span class="text-xs text-gray-500">SSL/TLS检测</span></span>
                                 </label>
                             </div>
                         </div>
@@ -445,8 +459,11 @@
             </div>
             
             <div class="mt-8 pt-6 border-t flex justify-end space-x-4">
+                <button id="printPdfReport" class="btn btn-secondary" onclick="handlePrintPdf()">
+                    <i class="fa fa-file-pdf-o mr-2"></i>导出PDF
+                </button>
                 <button id="downloadReport" class="btn btn-secondary">
-                    <i class="fa fa-download mr-2"></i>下载完整报告
+                    <i class="fa fa-download mr-2"></i>下载Markdown
                 </button>
                 <button id="closeModalBtn" class="btn btn-primary">
                     关闭
@@ -721,6 +738,7 @@
             window.currentReport = report;
             window.currentReportFormat = format;
             window.currentTarget = target;
+            window.currentTestId = resultData.test_id || resultData.results?.test_id || '';
         }
 
         function closeModal() {
@@ -744,6 +762,15 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+        }
+
+        function handlePrintPdf() {
+            const testId = window.currentTestId;
+            if (testId) {
+                window.open('/api/report/print/' + testId, '_blank');
+            } else {
+                alert('暂无可导出的报告');
+            }
         }
 
         function showErrorAlert(title, message) {

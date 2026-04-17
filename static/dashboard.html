@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全仪表盘 - 渗透测试智能辅助系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 20px; }
+        .stat-num { font-size: 2rem; font-weight: 700; }
+        .section-title { font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+        .input-field { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+        .input-field:focus { border-color: #4f46e5; }
+        .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
+        .btn-primary { background: #4f46e5; color: white; }
+        .btn-primary:hover { background: #6366f1; }
+        .btn-outline { background: white; color: #4f46e5; border: 1px solid #e2e8f0; }
+        .btn-outline:hover { border-color: #4f46e5; }
+        .btn-danger { background: #dc2626; color: white; }
+        .btn-danger:hover { background: #ef4444; }
+        .btn-success { background: #059669; color: white; }
+        .btn-success:hover { background: #10b981; }
+        .result-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; font-size: 13px; line-height: 1.6; max-height: 400px; overflow-y: auto; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; margin: 1px; }
+        .tag-high { background: #fef2f2; color: #dc2626; }
+        .tag-medium { background: #fffbeb; color: #d97706; }
+        .tag-low { background: #f0fdf4; color: #16a34a; }
+        .tag-info { background: #eff6ff; color: #2563eb; }
+        .tag-critical { background: #7f1d1d; color: #fecaca; }
+        .tool-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; margin: 2px; }
+        .header-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; }
+        .header-item:last-child { border-bottom: none; }
+        .loading { text-align: center; padding: 20px; color: #94a3b8; }
+        .score-ring { position: relative; width: 120px; height: 120px; }
+        .score-ring svg { transform: rotate(-90deg); }
+        .score-ring .score-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 28px; font-weight: 800; }
+        .audit-item { border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+        .audit-item.pass { border-left: 4px solid #10b981; }
+        .audit-item.fail { border-left: 4px solid #dc2626; }
+        .audit-item.warn { border-left: 4px solid #d97706; }
+        .audit-item.info { border-left: 4px solid #3b82f6; }
+        .tab-btn { padding: 6px 14px; border: none; background: transparent; font-size: 12px; font-weight: 600; color: #64748b; cursor: pointer; border-radius: 6px; transition: all 0.2s; }
+        .tab-btn.active { background: #4f46e5; color: white; }
+        .recon-btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #e2e8f0; background: white; color: #475569; transition: all 0.2s; }
+        .recon-btn:hover { border-color: #4f46e5; color: #4f46e5; }
+        .recon-btn.active { background: #4f46e5; color: white; border-color: #4f46e5; }
+    </style>
+</head>
+<body>
+<div class="max-w-6xl mx-auto p-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900">安全仪表盘</h1>
+            <p class="text-sm text-gray-500 mt-1">Web应用安全态势感知与综合评估</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="index.html" class="btn btn-outline">渗透测试</a>
+            <a href="chat.html" class="btn btn-outline">AI对话</a>
+            <a href="knowledge.html" class="btn btn-outline">知识库</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mb-6" id="statsCards">
+        <div class="card">
+            <div class="text-xs text-gray-500 mb-1">测试报告</div>
+            <div class="stat-num text-indigo-600" id="statReports">0</div>
+        </div>
+        <div class="card">
+            <div class="text-xs text-gray-500 mb-1">AI对话</div>
+            <div class="stat-num text-emerald-600" id="statSessions">0</div>
+        </div>
+        <div class="card">
+            <div class="text-xs text-gray-500 mb-1">MCP工具</div>
+            <div class="stat-num text-amber-600" id="statTools">-</div>
+        </div>
+        <div class="card">
+            <div class="text-xs text-gray-500 mb-1">系统状态</div>
+            <div class="stat-num text-green-600" id="statStatus">-</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-3 gap-6 mb-6">
+        <div class="card col-span-2">
+            <div class="section-title">综合安全审计</div>
+            <div class="flex gap-2 mb-3">
+                <input type="text" class="input-field" id="auditTarget" placeholder="输入目标URL进行综合安全评估...">
+                <button class="btn btn-primary" onclick="runFullAudit()" id="auditBtn">开始审计</button>
+            </div>
+            <div class="flex gap-1 flex-wrap mb-3">
+                <button class="recon-btn" onclick="runRecon('whois')">WHOIS</button>
+                <button class="recon-btn" onclick="runRecon('dns')">DNS</button>
+                <button class="recon-btn" onclick="runRecon('headers')">安全头</button>
+                <button class="recon-btn" onclick="runRecon('ports')">端口</button>
+                <button class="recon-btn" onclick="runRecon('cors')">CORS</button>
+                <button class="recon-btn" onclick="runRecon('cookies')">Cookie</button>
+                <button class="recon-btn" onclick="runRecon('tech')">技术栈</button>
+                <button class="recon-btn" onclick="runRecon('subdomain')">子域名</button>
+                <button class="recon-btn" onclick="runRecon('waf')">WAF</button>
+            </div>
+            <div id="auditResult" style="display:none;"></div>
+            <div id="reconResult" class="result-box mt-3" style="display:none;"></div>
+        </div>
+
+        <div class="card">
+            <div class="section-title">安全评分</div>
+            <div class="flex justify-center mb-4">
+                <div class="score-ring">
+                    <svg width="120" height="120">
+                        <circle cx="60" cy="60" r="52" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+                        <circle cx="60" cy="60" r="52" fill="none" stroke="#4f46e5" stroke-width="10"
+                            stroke-dasharray="326.7" stroke-dashoffset="326.7" stroke-linecap="round" id="scoreCircle"/>
+                    </svg>
+                    <div class="score-text text-gray-300" id="scoreText">--</div>
+                </div>
+            </div>
+            <div id="scoreBreakdown" class="text-sm text-gray-400 text-center">输入目标开始评估</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-6 mb-6">
+        <div class="card">
+            <div class="section-title">MCP工具状态</div>
+            <div id="toolsList" class="loading">加载中...</div>
+        </div>
+        <div class="card">
+            <div class="section-title">最近测试报告</div>
+            <div id="recentReports" class="loading">加载中...</div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="section-title">工具覆盖范围</div>
+        <div class="grid grid-cols-4 gap-4 mt-2">
+            <div>
+                <div class="text-xs font-semibold text-gray-600 mb-2">信息收集</div>
+                <span class="tool-badge tag-info">Nmap</span>
+                <span class="tool-badge tag-info">Amass</span>
+                <span class="tool-badge tag-info">Dirsearch</span>
+                <span class="tool-badge tag-info">WHOIS</span>
+                <span class="tool-badge tag-info">DNS</span>
+                <span class="tool-badge tag-info">端口检测</span>
+                <span class="tool-badge tag-info">子域名枚举</span>
+            </div>
+            <div>
+                <div class="text-xs font-semibold text-gray-600 mb-2">漏洞扫描</div>
+                <span class="tool-badge tag-high">OWASP ZAP</span>
+                <span class="tool-badge tag-high">SQLmap</span>
+                <span class="tool-badge tag-high">Nikto</span>
+                <span class="tool-badge tag-medium">SSLscan</span>
+                <span class="tool-badge tag-medium">安全头检测</span>
+                <span class="tool-badge tag-medium">CORS检测</span>
+            </div>
+            <div>
+                <div class="text-xs font-semibold text-gray-600 mb-2">安全分析</div>
+                <span class="tool-badge tag-medium">Cookie分析</span>
+                <span class="tool-badge tag-medium">技术指纹</span>
+                <span class="tool-badge tag-medium">WAF检测</span>
+                <span class="tool-badge tag-low">综合审计</span>
+                <span class="tool-badge tag-low">XSS Payload</span>
+            </div>
+            <div>
+                <div class="text-xs font-semibold text-gray-600 mb-2">漏洞利用与辅助</div>
+                <span class="tool-badge tag-high">Metasploit</span>
+                <span class="tool-badge tag-medium">Burp Suite</span>
+                <span class="tool-badge tag-low">报告生成器</span>
+                <span class="tool-badge tag-info">CVE查询</span>
+                <span class="tool-badge tag-info">OWASP知识库</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadStats() {
+    try {
+        const [reports, sessions, health] = await Promise.all([
+            fetch('/api/orchestrator/reports').then(r => r.json()),
+            fetch('/api/chat/sessions').then(r => r.json()),
+            fetch('http://127.0.0.1:9876/health').then(r => r.json()).catch(() => null)
+        ]);
+        document.getElementById('statReports').textContent = reports.total || 0;
+        document.getElementById('statSessions').textContent = (sessions.sessions || []).length;
+        document.getElementById('statTools').textContent = health ? health.available_tools.length : 'N/A';
+        document.getElementById('statStatus').textContent = health ? '在线' : '离线';
+        document.getElementById('statStatus').className = health ? 'stat-num text-green-600' : 'stat-num text-red-500';
+    } catch (e) {}
+}
+
+async function loadTools() {
+    try {
+        const resp = await fetch('http://127.0.0.1:9876/jsonrpc', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jsonrpc: '2.0', method: 'tools/list', params: {}, id: 2 })
+        });
+        const tools = await resp.json();
+        const list = tools.result?.tools || [];
+        const catColors = { information_gathering: 'tag-info', vulnerability_scanning: 'tag-high', exploitation: 'tag-medium', web_testing: 'tag-low', reporting: 'tag-low' };
+        document.getElementById('toolsList').innerHTML = list.map(t =>
+            `<span class="tool-badge ${catColors[t.category] || 'tag-info'}">${t.name}</span>`
+        ).join('');
+    } catch (e) {
+        document.getElementById('toolsList').innerHTML = '<span class="text-red-500 text-sm">MCP服务未连接</span>';
+    }
+}
+
+async function loadRecentReports() {
+    try {
+        const resp = await fetch('/api/orchestrator/reports');
+        const data = await resp.json();
+        const reports = (data.reports || []).slice(0, 5);
+        if (!reports.length) {
+            document.getElementById('recentReports').innerHTML = '<div class="text-sm text-gray-400">暂无测试报告</div>';
+            return;
+        }
+        document.getElementById('recentReports').innerHTML = reports.map(r => `
+            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                <div>
+                    <div class="text-sm font-medium text-gray-800">${r.target}</div>
+                    <div class="text-xs text-gray-400">${r.created_at}</div>
+                </div>
+                <span class="tool-badge ${r.tools && r.tools.length > 1 ? 'tag-info' : 'tag-low'}">${r.tools ? r.tools.length : 0} 工具</span>
+            </div>
+        `).join('');
+    } catch (e) {
+        document.getElementById('recentReports').innerHTML = '<div class="text-sm text-red-400">加载失败</div>';
+    }
+}
+
+function updateScoreRing(score) {
+    const circle = document.getElementById('scoreCircle');
+    const text = document.getElementById('scoreText');
+    const circumference = 2 * Math.PI * 52;
+    const offset = circumference - (score / 100) * circumference;
+    circle.style.strokeDashoffset = offset;
+    let color = '#dc2626';
+    if (score >= 80) color = '#10b981';
+    else if (score >= 60) color = '#d97706';
+    else if (score >= 40) color = '#ea580c';
+    circle.style.stroke = color;
+    text.textContent = score;
+    text.style.color = color;
+}
+
+async function runFullAudit() {
+    const target = document.getElementById('auditTarget').value.trim();
+    if (!target) { alert('请输入目标URL'); return; }
+    const btn = document.getElementById('auditBtn');
+    btn.disabled = true;
+    btn.textContent = '审计中...';
+    const el = document.getElementById('auditResult');
+    el.style.display = 'block';
+    el.innerHTML = '<div class="loading">正在进行综合安全审计，请稍候...</div>';
+
+    try {
+        const resp = await fetch('/api/recon/full-audit', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: target })
+        });
+        const data = await resp.json();
+        if (data.status !== 'success') throw new Error(data.detail || '审计失败');
+
+        updateScoreRing(data.overall_score);
+        const r = data.results;
+        let html = '<div class="space-y-3">';
+
+        if (r.security_headers && !r.security_headers.error) {
+            const sh = r.security_headers;
+            const status = sh.score >= 70 ? 'pass' : sh.score >= 40 ? 'warn' : 'fail';
+            html += `<div class="audit-item ${status}">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm">安全响应头</span>
+                    <span class="tag tag-${status === 'pass' ? 'low' : status === 'warn' ? 'medium' : 'high'}">${sh.score}/100</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">存在: ${(sh.present || []).length} 项 | 缺失: ${(sh.missing || []).length} 项</div>
+            </div>`;
+        }
+
+        if (r.cors && !r.cors.error) {
+            const cors = r.cors;
+            const status = cors.vulnerable ? 'fail' : 'pass';
+            html += `<div class="audit-item ${status}">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm">CORS配置</span>
+                    <span class="tag tag-${cors.vulnerable ? 'high' : 'low'}">${cors.vulnerable ? '存在风险' : '安全'}</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">ACAO: ${cors.access_control_allow_origin || '未配置'}</div>
+            </div>`;
+        }
+
+        if (r.cookies && !r.cookies.error) {
+            const ck = r.cookies;
+            const status = ck.total_issues > 0 ? 'warn' : 'pass';
+            html += `<div class="audit-item ${status}">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm">Cookie安全</span>
+                    <span class="tag tag-${ck.total_issues > 0 ? 'medium' : 'low'}">${ck.total_issues} 个问题</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">Cookie数: ${ck.total_cookies}</div>
+            </div>`;
+        }
+
+        if (r.tech && !r.tech.error) {
+            html += `<div class="audit-item info">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm">技术栈识别</span>
+                    <span class="tag tag-info">已检测</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">Server: ${r.tech.server || 'Unknown'} | Powered: ${r.tech.powered_by || 'N/A'}</div>
+            </div>`;
+        }
+
+        if (r.ports && !r.ports.error) {
+            const pt = r.ports;
+            const status = pt.open_ports.length > 3 ? 'warn' : pt.open_ports.length > 0 ? 'info' : 'pass';
+            html += `<div class="audit-item ${status}">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm">端口扫描</span>
+                    <span class="tag tag-${pt.open_ports.length > 3 ? 'medium' : 'low'}">${pt.open_ports.length} 个开放</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">检测: ${pt.total_checked} 端口 | 开放: ${pt.open_ports.join(', ') || '无'}</div>
+            </div>`;
+        }
+
+        if (r.waf && !r.waf.error) {
+            const waf = r.waf;
+            html += `<div class="audit-item ${waf.waf_detected ? 'info' : 'warn'}">
+                <div class="flex justify-between items-center">
+                    <span class="font-semibold text-sm">WAF检测</span>
+                    <span class="tag tag-${waf.waf_detected ? 'info' : 'medium'}">${waf.waf_detected ? '已部署' : '未检测到'}</span>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">${waf.wafs ? waf.wafs.map(w => w.name).join(', ') : ''}</div>
+            </div>`;
+        }
+
+        html += '</div>';
+        el.innerHTML = html;
+
+        document.getElementById('scoreBreakdown').innerHTML = `<span class="font-bold" style="color:${data.overall_score >= 80 ? '#10b981' : data.overall_score >= 60 ? '#d97706' : '#dc2626'}">综合评分: ${data.overall_score}/100</span>`;
+
+    } catch (e) {
+        el.innerHTML = `<div class="text-sm text-red-500">审计失败: ${e.message}</div>`;
+    }
+    btn.disabled = false;
+    btn.textContent = '开始审计';
+}
+
+async function runRecon(type) {
+    const target = document.getElementById('auditTarget').value.trim();
+    if (!target) { alert('请输入目标'); return; }
+    const el = document.getElementById('reconResult');
+    el.style.display = 'block';
+    el.innerHTML = '<div class="loading">检测中...</div>';
+
+    const endpoints = {
+        whois: { url: '/api/recon/whois', body: { target } },
+        dns: { url: '/api/recon/dns', body: { target } },
+        headers: { url: '/api/recon/security-headers', body: { url: target } },
+        ports: { url: '/api/recon/port-check', body: { target } },
+        cors: { url: '/api/recon/cors-check', body: { url: target } },
+        cookies: { url: '/api/recon/cookie-check', body: { url: target } },
+        tech: { url: '/api/recon/tech-detect', body: { url: target } },
+        subdomain: { url: '/api/recon/subdomain-enum', body: { target } },
+        waf: { url: '/api/recon/waf-detect', body: { url: target } },
+    };
+
+    const ep = endpoints[type];
+    if (!ep) return;
+
+    try {
+        const resp = await fetch(ep.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(ep.body)
+        });
+        const data = await resp.json();
+
+        if (resp.status !== 200) {
+            el.innerHTML = `<div class="text-sm text-red-500">检测失败: ${data.detail || '未知错误'}</div>`;
+            return;
+        }
+
+        let html = '';
+        if (type === 'whois') {
+            const d = data.data || {};
+            html = `<strong>域名:</strong> ${d.domain || target}<br><strong>解析IP:</strong> ${(d.resolved_ips || []).join(', ') || '无'}`;
+        } else if (type === 'dns') {
+            const d = data.data || {};
+            html = `<strong>A:</strong> ${(d.A || []).join(', ') || '无'}<br><strong>NS:</strong> ${(d.NS || []).join(', ') || '无'}<br><strong>MX:</strong> ${(d.MX || []).join(', ') || '无'}`;
+        } else if (type === 'headers') {
+            html = `<strong>评分: ${data.score}/100</strong> · 缺失 ${data.missing_count} 项 · 服务器: ${data.server}`;
+            if (data.security_headers) {
+                html += '<div class="mt-2">';
+                for (const [k, v] of Object.entries(data.security_headers)) {
+                    html += `<div class="header-item"><span class="text-xs">${v.name}</span><span class="tag ${v.present ? 'tag-low' : v.severity === 'High' ? 'tag-high' : 'tag-medium'}">${v.present ? '✓' : '✗'}</span></div>`;
+                }
+                html += '</div>';
+            }
+        } else if (type === 'ports') {
+            const ports = data.open_ports || [];
+            html = `<strong>开放端口 (${ports.length}):</strong><br>${ports.map(p => `<span class="tool-badge tag-medium">${p.port}/${p.service}</span>`).join(' ') || '无开放端口'}<br><span class="text-xs text-gray-400">检测了 ${data.total_checked} 个端口</span>`;
+        } else if (type === 'cors') {
+            const issues = data.issues || [];
+            html = `<strong>ACAO:</strong> ${data.access_control_allow_origin || '未配置'}<br><strong>ACAC:</strong> ${data.access_control_allow_credentials || '未配置'}<br>`;
+            html += issues.map(i => `<span class="tag tag-${i.severity.toLowerCase() === 'critical' ? 'critical' : i.severity.toLowerCase() === 'high' ? 'high' : i.severity.toLowerCase() === 'medium' ? 'medium' : 'low'}">${i.severity}: ${i.detail}</span>`).join(' ');
+        } else if (type === 'cookies') {
+            const cookies = data.cookies || [];
+            html = `<strong>Cookie数:</strong> ${data.total_cookies} · <strong>问题数:</strong> ${data.total_issues}<br>`;
+            html += cookies.map(c => `<div class="audit-item ${c.issues.length > 0 ? 'warn' : 'pass'}"><span class="font-medium">${c.name}</span> <span class="text-xs">H:${c.flags.HttpOnly ? '✓' : '✗'} S:${c.flags.Secure ? '✓' : '✗'} SS:${c.flags.SameSite || '✗'}</span></div>`).join('');
+        } else if (type === 'tech') {
+            const techs = data.technologies || [];
+            html = `<strong>检测到 ${techs.length} 项技术:</strong><br>`;
+            html += techs.map(t => `<span class="tool-badge tag-info">${t.name}: ${t.value}</span>`).join(' ');
+        } else if (type === 'subdomain') {
+            const subs = data.subdomains || [];
+            html = `<strong>发现 ${subs.length} 个子域名:</strong><br>`;
+            html += subs.slice(0, 20).map(s => `<span class="tool-badge tag-info">${s}</span>`).join(' ');
+            if (subs.length > 20) html += `<br><span class="text-xs text-gray-400">...还有 ${subs.length - 20} 个</span>`;
+        } else if (type === 'waf') {
+            html = data.waf_detected
+                ? `<strong class="text-blue-600">检测到WAF:</strong> ${data.wafs.map(w => w.name).join(', ')}<br><span class="text-xs text-gray-400">证据: ${data.wafs.map(w => w.evidence).join(', ')}</span>`
+                : `<strong class="text-green-600">未检测到WAF</strong><br><span class="text-xs text-gray-400">目标可能没有Web应用防火墙保护</span>`;
+        }
+        el.innerHTML = `<div class="text-sm">${html}</div>`;
+    } catch (e) {
+        el.innerHTML = `<div class="text-sm text-red-500">检测失败: ${e.message}</div>`;
+    }
+}
+
+loadStats();
+loadTools();
+loadRecentReports();
+</script>
+</body>
+</html>
