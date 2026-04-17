@@ -48,3 +48,8 @@ docker-data/
 # Private documents
 毕业论文.md
 基于大模型的Web应用渗透测试智能辅助系统.md
+
+# Test artifacts
+test_results.json
+screenshots/
+test_report.docx

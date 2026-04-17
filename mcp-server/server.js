@@ -112,7 +112,7 @@ const TOOLS_CONFIG = {
         description: 'Web服务器漏洞扫描器，检测危险配置、过时软件和服务器安全问题',
         category: 'vulnerability_scanning',
         container: 'pentest-nikto',
-        command: 'nikto',
+        command: 'nikto.pl',
         parameters: [
             { name: 'target', type: 'string', required: true, description: '目标URL或IP' },
             { name: 'options', type: 'string', required: false, description: '扫描选项，如 -Tuning 1234, -ssl' }
@@ -544,7 +544,7 @@ async function executeNikto(params) {
     target = target.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
     try {
-        let cmd = `${DOCKER_CMD} exec pentest-nikto nikto -h ${target} ${options} -Format txt`;
+        let cmd = `${DOCKER_CMD} exec pentest-nikto perl /usr/bin/nikto.pl -h ${target} ${options} -Format txt`;
         log(`[Nikto] 执行命令: ${cmd}`);
 
         const output = execSync(cmd, {

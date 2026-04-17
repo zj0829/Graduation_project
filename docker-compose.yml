@@ -85,6 +85,45 @@ services:
     networks:
       - pentest-network
 
+  nikto:
+    image: frapsoft/nikto:latest
+    container_name: pentest-nikto
+    entrypoint: [""]
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./tools/nikto:/data
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
+  dirsearch:
+    build: ./tools/dirsearch
+    container_name: pentest-dirsearch
+    entrypoint: [""]
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./tools/dirsearch:/data
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
+  sslscan:
+    build: ./tools/sslscan
+    container_name: pentest-sslscan
+    entrypoint: [""]
+    command: ["sleep", "infinity"]
+    volumes:
+      - ./tools/sslscan:/data
+    environment:
+      - TZ=Asia/Shanghai
+    restart: unless-stopped
+    networks:
+      - pentest-network
+
 networks:
   pentest-network:
     driver: bridge

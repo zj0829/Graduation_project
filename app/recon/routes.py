@@ -191,7 +191,7 @@ async def quick_port_check(req: TargetRequest):
         for port in common_ports:
             try:
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(1.5)
+                sock.settimeout(0.8)
                 result = sock.connect_ex((host, port))
                 if result == 0:
                     service_map = {
