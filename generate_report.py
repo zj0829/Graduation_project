@@ -384,6 +384,6 @@ if s["api_failed"] > 0:
 conclusion += "系统整体功能正常，安全检测工具链完整，可满足Web应用渗透测试需求。"
 add_para(conclusion)
 
-output_path = "test_report.docx"
+output_path = "test_report_v2.docx"
 doc.save(output_path)
 print(f"Word report saved to {output_path}")

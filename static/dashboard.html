@@ -6,18 +6,20 @@
     <title>安全仪表盘 - 渗透测试智能辅助系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+        .gradient-bg { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); }
         .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); padding: 20px; }
         .stat-num { font-size: 2rem; font-weight: 700; }
         .section-title { font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
         .input-field { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; outline: none; transition: border-color 0.2s; }
-        .input-field:focus { border-color: #4f46e5; }
+        .input-field:focus { border-color: #1e40af; }
         .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.2s; }
-        .btn-primary { background: #4f46e5; color: white; }
-        .btn-primary:hover { background: #6366f1; }
-        .btn-outline { background: white; color: #4f46e5; border: 1px solid #e2e8f0; }
-        .btn-outline:hover { border-color: #4f46e5; }
+        .btn-primary { background: #1e40af; color: white; }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-outline { background: white; color: #1e40af; border: 1px solid #e2e8f0; }
+        .btn-outline:hover { border-color: #1e40af; }
         .btn-danger { background: #dc2626; color: white; }
         .btn-danger:hover { background: #ef4444; }
         .btn-success { background: #059669; color: white; }
@@ -48,19 +50,27 @@
         .recon-btn.active { background: #4f46e5; color: white; border-color: #4f46e5; }
     </style>
 </head>
-<body>
-<div class="max-w-6xl mx-auto p-6">
-    <div class="flex items-center justify-between mb-6">
-        <div>
-            <h1 class="text-xl font-bold text-gray-900">安全仪表盘</h1>
-            <p class="text-sm text-gray-500 mt-1">Web应用安全态势感知与综合评估</p>
+<body class="min-h-screen">
+    <nav class="gradient-bg text-white sticky top-0 z-50 shadow-xl">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <i class="fa fa-dashboard text-2xl"></i>
+                    <div>
+                        <h1 class="text-lg font-bold">安全仪表盘</h1>
+                        <p class="text-xs opacity-80">Web应用安全态势感知与综合评估</p>
+                    </div>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="index.html" class="hover:text-yellow-300 transition-colors font-medium"><i class="fa fa-home mr-1"></i>首页</a>
+                    <a href="knowledge.html" class="hover:text-yellow-300 transition-colors font-medium"><i class="fa fa-book mr-1"></i>知识库</a>
+                    <a href="chat.html" class="hover:text-yellow-300 transition-colors font-medium"><i class="fa fa-comments mr-1"></i>AI对话</a>
+                </div>
+            </div>
         </div>
-        <div class="flex gap-2">
-            <a href="index.html" class="btn btn-outline">渗透测试</a>
-            <a href="chat.html" class="btn btn-outline">AI对话</a>
-            <a href="knowledge.html" class="btn btn-outline">知识库</a>
-        </div>
-    </div>
+    </nav>
+
+    <div class="container mx-auto px-6 py-6 max-w-6xl">
 
     <div class="grid grid-cols-4 gap-4 mb-6" id="statsCards">
         <div class="card">
